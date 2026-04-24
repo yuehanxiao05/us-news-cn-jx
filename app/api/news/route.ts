@@ -3,17 +3,6 @@ import Parser from "rss-parser";
 
 const parser = new Parser();
 
-let lastFetchTime = 0;
-
-const feeds = {
-  finance:
-    "https://news.google.com/rss/headlines/section/topic/BUSINESS?hl=en-US&gl=US&ceid=US:en",
-  entertainment:
-    "https://news.google.com/rss/headlines/section/topic/ENTERTAINMENT?hl=en-US&gl=US&ceid=US:en",
-  technology:
-    "https://news.google.com/rss/headlines/section/topic/TECHNOLOGY?hl=en-US&gl=US&ceid=US:en",
-};
-
 type NewsItem = {
   title: string;
   link: string;
@@ -25,9 +14,21 @@ type NewsData = {
   technology: NewsItem[];
 };
 
+// ✅ 缓存（避免频繁调用 OpenAI）
 let cache: NewsData | null = null;
 let lastFetchTime = 0;
 
+// RSS 来源
+const feeds = {
+  finance:
+    "https://news.google.com/rss/headlines/section/topic/BUSINESS?hl=en-US&gl=US&ceid=US:en",
+  entertainment:
+    "https://news.google.com/rss/headlines/section/topic/ENTERTAINMENT?hl=en-US&gl=US&ceid=US:en",
+  technology:
+    "https://news.google.com/rss/headlines/section/topic/TECHNOLOGY?hl=en-US&gl=US&ceid=US:en",
+};
+
+// 获取新闻
 async function getFeed(url: string): Promise<NewsItem[]> {
   const feed = await parser.parseURL(url);
 
@@ -37,6 +38,7 @@ async function getFeed(url: string): Promise<NewsItem[]> {
   }));
 }
 
+// 批量翻译
 async function translateAll(data: NewsData): Promise<NewsData> {
   if (!process.env.OPENAI_API_KEY) {
     console.log("No OpenAI API key");
@@ -56,11 +58,10 @@ async function translateAll(data: NewsData): Promise<NewsData> {
 请把下面 JSON 里的美国新闻标题翻译成中文。
 
 要求：
-1. 只翻译 title。
-2. link 保持不变。
-3. 人名、公司名、品牌名、产品名、股票代码保留英文。
-4. 不要添加原文没有的信息。
-5. 只返回 JSON，不要 markdown，不要解释。
+1. 只翻译 title
+2. link 不变
+3. 人名、公司名、品牌名、产品名保留英文
+4. 只返回 JSON，不要解释
 
 JSON:
 ${JSON.stringify(data)}
@@ -75,6 +76,7 @@ ${JSON.stringify(data)}
       return data;
     }
 
+    // ✅ 正确读取返回内容
     const text = result.output?.[0]?.content?.[0]?.text;
 
     if (!text) {
@@ -89,10 +91,11 @@ ${JSON.stringify(data)}
   }
 }
 
+// 主接口
 export async function GET() {
   const now = Date.now();
 
-  // 60 秒内直接用缓存，避免频繁调用 OpenAI
+  // ✅ 60秒缓存
   if (cache && now - lastFetchTime < 60000) {
     console.log("Using cache");
     return NextResponse.json(cache);
@@ -112,6 +115,7 @@ export async function GET() {
 
   const translatedData = await translateAll(rawData);
 
+  // 存缓存
   cache = translatedData;
   lastFetchTime = now;
 
