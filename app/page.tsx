@@ -10,9 +10,12 @@ type NewsData = {
 };
 
 async function getNews(): Promise<NewsData> {
-  const res = await fetch("http://127.0.0.1:3000/api/news", {
+  const res = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || ""}/api/news`, {
     cache: "no-store",
   });
+
+  return res.json();
+}
 
   const text = await res.text();
 
