@@ -84,7 +84,13 @@ ${JSON.stringify(data)}
       return data;
     }
 
-    return JSON.parse(text);
+    const cleaned = text
+  .replace(/```json/g, "")
+  .replace(/```/g, "")
+  .trim();
+
+return JSON.parse(cleaned);
+
   } catch (e) {
     console.log("Translate failed:", e);
     return data;
