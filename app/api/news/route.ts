@@ -3,7 +3,6 @@ import Parser from "rss-parser";
 
 const parser = new Parser();
 
-let cache: any = null;
 let lastFetchTime = 0;
 
 const feeds = {
@@ -25,6 +24,9 @@ type NewsData = {
   entertainment: NewsItem[];
   technology: NewsItem[];
 };
+
+let cache: NewsData | null = null;
+let lastFetchTime = 0;
 
 async function getFeed(url: string): Promise<NewsItem[]> {
   const feed = await parser.parseURL(url);
