@@ -4,7 +4,7 @@ export async function POST(req: Request) {
   try {
     const { question } = await req.json();
 
-    if (!question) {
+    if (!question || !question.trim()) {
       return NextResponse.json({ answer: "请输入问题。" }, { status: 400 });
     }
 
@@ -34,12 +34,22 @@ ${question}
     const data = await res.json();
 
     if (data.error) {
+      console.log("OpenAI error:", data.error);
       return NextResponse.json({
         answer: `搜索失败：${data.error.message}`,
       });
     }
 
-    const answer = data.output_text || data.output?.[0]?.content?.[0]?.text || "没有找到答案。";
+    let answer =
+      data.output_text ||
+      data.output?.[0]?.content?.[0]?.text ||
+      data.output?.[0]?.content?.[0]?.text?.value ||
+      "";
+
+    if (!answer) {
+      console.log("完整返回:", JSON.stringify(data, null, 2));
+      answer = "没有找到答案。";
+    }
 
     return NextResponse.json({ answer });
   } catch (e) {
