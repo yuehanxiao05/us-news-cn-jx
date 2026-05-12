@@ -1,3 +1,5 @@
+import ChatBox from "./ChatBox";
+
 type NewsItem = {
   title: string;
   link: string;
@@ -28,6 +30,7 @@ export default async function Home() {
   return (
     <main style={{ padding: 40, fontFamily: "Arial", maxWidth: 900, margin: "0 auto" }}>
       <h1>美国新闻</h1>
+      <ChatBox />
       <p style={{ color: "#666", marginBottom: 32 }}>
         Finance、Entertainment、Technology 每类 Top 5，中文标题与详细概括。
       </p>
