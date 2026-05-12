@@ -6,6 +6,7 @@ const parser = new Parser();
 type NewsItem = {
   title: string;
   link: string;
+  summary?: string;
 };
 
 type NewsData = {
@@ -14,11 +15,9 @@ type NewsData = {
   technology: NewsItem[];
 };
 
-// ✅ 缓存（避免频繁调用 OpenAI）
 let cache: NewsData | null = null;
 let lastFetchTime = 0;
 
-// RSS 来源
 const feeds = {
   finance:
     "https://news.google.com/rss/headlines/section/topic/BUSINESS?hl=en-US&gl=US&ceid=US:en",
@@ -28,20 +27,18 @@ const feeds = {
     "https://news.google.com/rss/headlines/section/topic/TECHNOLOGY?hl=en-US&gl=US&ceid=US:en",
 };
 
-// 获取新闻
 async function getFeed(url: string): Promise<NewsItem[]> {
   const feed = await parser.parseURL(url);
 
   return feed.items.slice(0, 5).map((item) => ({
     title: item.title || "",
     link: item.link || "",
+    summary: item.contentSnippet || "",
   }));
 }
 
-// 批量翻译
-async function translateAll(data: NewsData): Promise<NewsData> {
+async function enhanceNews(data: NewsData): Promise<NewsData> {
   if (!process.env.OPENAI_API_KEY) {
-    console.log("No OpenAI API key");
     return data;
   }
 
@@ -55,13 +52,15 @@ async function translateAll(data: NewsData): Promise<NewsData> {
       body: JSON.stringify({
         model: "gpt-4.1-mini",
         input: `
-请把下面 JSON 里的美国新闻标题翻译成中文。
+请处理下面 JSON 里的美国新闻。
 
 要求：
-1. 只翻译 title
-2. link 不变
-3. 人名、公司名、品牌名、产品名保留英文
-4. 只返回 JSON，不要解释
+1. title 翻译成中文。
+2. 每条新闻增加/改写 summary，summary 用中文写 2-4 句，信息量更丰富。
+3. 人名、公司名、品牌名、产品名、股票代码保留英文。
+4. 不要添加原文没有的信息。
+5. link 保持不变。
+6. 只返回 JSON，不要 markdown，不要解释。
 
 JSON:
 ${JSON.stringify(data)}
@@ -76,7 +75,6 @@ ${JSON.stringify(data)}
       return data;
     }
 
-    // ✅ 正确读取返回内容
     const text = result.output?.[0]?.content?.[0]?.text;
 
     if (!text) {
@@ -85,25 +83,22 @@ ${JSON.stringify(data)}
     }
 
     const cleaned = text
-  .replace(/```json/g, "")
-  .replace(/```/g, "")
-  .trim();
+      .replace(/```json/g, "")
+      .replace(/```/g, "")
+      .trim();
 
-return JSON.parse(cleaned);
-
+    return JSON.parse(cleaned);
   } catch (e) {
-    console.log("Translate failed:", e);
+    console.log("Enhance failed:", e);
     return data;
   }
 }
 
-// 主接口
 export async function GET() {
   const now = Date.now();
 
-  // ✅ 60秒缓存
-  if (cache && now - lastFetchTime < 60000) {
-    console.log("Using cache");
+  // 10分钟缓存，省钱也避免 rate limit
+  if (cache && now - lastFetchTime < 10 * 60 * 1000) {
     return NextResponse.json(cache);
   }
 
@@ -119,11 +114,10 @@ export async function GET() {
     technology,
   };
 
-  const translatedData = await translateAll(rawData);
+  const enhancedData = await enhanceNews(rawData);
 
-  // 存缓存
-  cache = translatedData;
+  cache = enhancedData;
   lastFetchTime = now;
 
-  return NextResponse.json(translatedData);
+  return NextResponse.json(enhancedData);
 }

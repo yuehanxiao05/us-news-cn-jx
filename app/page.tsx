@@ -1,6 +1,7 @@
 type NewsItem = {
   title: string;
   link: string;
+  summary?: string;
 };
 
 type NewsData = {
@@ -25,8 +26,11 @@ export default async function Home() {
   const data = await getNews();
 
   return (
-    <main style={{ padding: 40, fontFamily: "Arial" }}>
+    <main style={{ padding: 40, fontFamily: "Arial", maxWidth: 900, margin: "0 auto" }}>
       <h1>美国新闻</h1>
+      <p style={{ color: "#666", marginBottom: 32 }}>
+        Finance、Entertainment、Technology 每类 Top 5，中文标题与详细概括。
+      </p>
 
       <Section title="Finance" items={data.finance} />
       <Section title="Entertainment" items={data.entertainment} />
@@ -37,19 +41,32 @@ export default async function Home() {
 
 function Section({ title, items }: { title: string; items: NewsItem[] }) {
   return (
-    <div style={{ marginBottom: 40 }}>
+    <section style={{ marginBottom: 48 }}>
       <h2>{title}</h2>
 
       {items.map((item, index) => (
-        <div key={item.link} style={{ marginBottom: 20 }}>
+        <article
+          key={item.link}
+          style={{
+            marginBottom: 24,
+            padding: 20,
+            border: "1px solid #ddd",
+            borderRadius: 12,
+          }}
+        >
           <h3>
             {index + 1}. {item.title}
           </h3>
+
+          <p style={{ lineHeight: 1.7, color: "#333" }}>
+            {item.summary || "暂无概括"}
+          </p>
+
           <a href={item.link} target="_blank">
             阅读原文
           </a>
-        </div>
+        </article>
       ))}
-    </div>
+    </section>
   );
 }
