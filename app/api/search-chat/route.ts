@@ -39,7 +39,7 @@ ${question}
       });
     }
 
-    const answer = data.output?.[0]?.content?.[0]?.text || "没有找到答案。";
+    const answer = data.output_text || data.output?.[0]?.content?.[0]?.text || "没有找到答案。";
 
     return NextResponse.json({ answer });
   } catch (e) {
